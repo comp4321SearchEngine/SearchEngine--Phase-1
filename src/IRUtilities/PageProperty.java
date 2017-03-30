@@ -5,11 +5,10 @@ import jdbm.RecordManager;
 import jdbm.RecordManagerFactory;
 import jdbm.htree.HTree;
 import jdbm.helper.FastIterator;
-import java.util.Vector;
 import java.io.IOException;
 import java.io.Serializable;
 
-import javax.swing.text.html.parser.Parser;
+//import javax.swing.text.html.parser.Parser;
 
 class Property implements Serializable {
 	public String title;
@@ -17,11 +16,11 @@ class Property implements Serializable {
 	public String lastModifyDate;
 	public int size;
 
-	Property(String title, String url, String lastModifyDate, int size){
-		this.title = title;
-		this.url = url;
-		this.lastModifyDate = lastModifyDate;
-		this.size = size;
+	Property(String _title, String _url, String _lastModifyDate, int _size){
+		title = _title;
+		url = _url;
+		lastModifyDate = _lastModifyDate;
+		size = _size;
 	}
 }
 
@@ -29,22 +28,27 @@ public class PageProperty {
 	private RecordManager recman;
 	private HTree hashtable;
 
-	public PageProperty(RecordManager recman, String objectname) throws IOException {
-		this.recman = recman;
+	public PageProperty(RecordManager _recman, String objectname) throws IOException {
+		recman = _recman;
 		long recid = recman.getNamedObject(objectname);
 
-		if (recid != 0) {
-			hashtable = HTree.load(recman, recid);
-		}
-		else // If not, create a new hashtable;
-		{
+		if (recid == 0) {
 			hashtable = HTree.createInstance(recman);
 			recman.setNamedObject(objectname, hashtable.getRecid());
+		}
+		else // If not, load hashtable;
+		{
+			hashtable = HTree.load(recman, recid);
 		}
 	}
 	
 	public boolean isContain(String word) throws IOException{
-		return hashtable.get(word)!=null;
+		if (hashtable.get(word)!=null) {
+			return true;
+		}
+		else {
+			return false;
+		}
 	}
 	
 	public void finalize() throws IOException {
@@ -52,42 +56,51 @@ public class PageProperty {
 		recman.close();
 	}
 	
-	public void addEntry(String key, String title, String url, String lastModifyDate, int size) throws IOException {
-		if (hashtable.get(key) != null){
+	public void addEntry(String _key, String _title, String _url, String _lastModifyDate, int _size) throws IOException {
+		if (hashtable.get(_key) == null){
+			hashtable.put(_key, new Property(_title, _url, _lastModifyDate, _size));
+		}
+		else {
 			return;
 		}
-		hashtable.put(key, new Property(title, url, lastModifyDate, size));
 	}
 	
-	public String getTitle(String key) throws IOException{
-		Property temp = (Property)hashtable.get(key);
-		return temp.title;
+	public Property gethastable(String _key) throws IOException{
+		Property curr_page = (Property)hashtable.get(_key);
+		return curr_page;
 	}
 	
-	public String getUrl(String key) throws IOException{
-		Property temp = (Property)hashtable.get(key);
-		return temp.url;
+	public String getTitle(String _key) throws IOException{
+		Property curr_page = gethastable(_key);
+		return curr_page.title;
 	}
 	
-	public String getLastDate(String key) throws IOException{
-		Property temp = (Property)hashtable.get(key);
-		return temp.lastModifyDate;
+	public String getUrl(String _key) throws IOException{
+		Property curr_page = gethastable(_key);
+		return curr_page.url;
 	}
 	
-	public int getPageSize(String key) throws IOException{
-		Property temp = (Property)hashtable.get(key);
-		return temp.size;
+	public String getLastDate(String _key) throws IOException{
+		Property curr_page = gethastable(_key);
+		return curr_page.lastModifyDate;
 	}
 	
-	public void update(String key, String title, String url, String lastModifyDate, int size) throws IOException{
-		if (hashtable.get(key) == null){
+	public int getPageSize(String _key) throws IOException{
+		Property curr_page = gethastable(_key);
+		return curr_page.size;
+	}
+	
+	public void update(String _key, String _title, String _url, String _lastModifyDate, int _size) throws IOException{
+		if (hashtable.get(_key) == null){
 			return;
 		}
-		Property temp = (Property)hashtable.get(key);
-		temp.title = title;
-		temp.url = url;
-		temp.lastModifyDate = lastModifyDate;
-		temp.size = size;
+		else {
+			Property curr_page = gethastable(_key);
+			curr_page.title = _title;
+			curr_page.url = _url;
+			curr_page.lastModifyDate = _lastModifyDate;
+			curr_page.size = _size;
+		}
 	}
 	
 	public void delEntry(String word) throws IOException {
@@ -97,10 +110,10 @@ public class PageProperty {
 	public void printAll() throws IOException {
 		FastIterator iter = hashtable.keys();
 		String key;
-		while ((key = (String) iter.next()) != null) {
-			Property temp = (Property)hashtable.get(key);
-			System.out.println(key + ": " + temp.title+","+temp.url+","+temp.lastModifyDate+","+temp.size);
+		while (((String) iter.next()) != null) {
+			key = (String) iter.next();
+			Property curr_page = gethastable(key);
+			System.out.println(key + ": " + curr_page.title+ " , "+ curr_page.url + " , "+ curr_page.lastModifyDate+ " , " + curr_page.size);
 		}
 	}
-	
 }
